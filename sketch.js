@@ -5,7 +5,9 @@ TILE LEGEND
 0 = floor
 1 = wall
 2 = goal (finish tile)
+3 = obstacle (blocks like a wall)
 */
+
 const LEVELS = [
   {
     name: "Level 1",
@@ -13,19 +15,19 @@ const LEVELS = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,0,0,0,0,1,0,0,0,0,0,1,0,0,2,1],
       [1,0,1,1,0,1,0,1,1,1,0,1,0,1,0,1],
-      [1,0,1,0,0,0,0,0,0,1,0,0,0,1,0,1],
+      [1,0,1,1,0,0,0,0,0,1,0,0,0,1,0,1],
       [1,0,1,0,1,1,1,1,0,1,1,1,0,1,0,1],
       [1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1],
-      [1,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1],
+      [1,1,1,1,1,1,3,1,1,1,0,1,1,1,0,1],
       [1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,1],
       [1,0,1,1,0,1,1,1,0,1,1,1,0,1,0,1],
-      [1,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],
+
+      [1,0,0,1,3,0,0,1,0,3,0,1,0,0,0,1],
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     ],
     playerStart: { r: 1, c: 1 },
   },
 
-  // BONUS: second level (different layout)
   {
     name: "Level 2",
     grid: [
@@ -37,7 +39,8 @@ const LEVELS = [
       [1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1],
       [1,1,1,1,1,0,1,1,1,1,0,1,1,1,0,1],
       [1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1],
-      [1,0,1,0,1,1,1,1,0,1,1,1,0,1,0,1],
+      // obstacle inside the maze
+      [1,0,1,3,1,1,3,1,3,1,1,1,0,1,3,1],
       [1,0,1,0,0,0,0,1,0,0,0,1,0,0,0,1],
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     ],
@@ -48,7 +51,6 @@ const LEVELS = [
 // ---- game state ----
 let levelIndex = 0;
 let grid = null;
-
 let player = { r: 1, c: 1 };
 let won = false;
 
@@ -68,11 +70,25 @@ function draw() {
     for (let c = 0; c < grid[0].length; c++) {
       const t = grid[r][c];
 
-      if (t === 1) fill(30, 50, 60);      // wall
-      else if (t === 2) fill(80, 180, 120); // goal
-      else fill(230);                      // floor
-
-      rect(c * TS, r * TS, TS, TS);
+      if (t === 1) {
+        // wall
+        fill(30, 50, 60);
+        rect(c * TS, r * TS, TS, TS);
+      } else if (t === 2) {
+        // goal
+        fill(80, 180, 120);
+        rect(c * TS, r * TS, TS, TS);
+      } else if (t === 3) {
+        // obstacle (draw smaller so it looks like an object)
+        fill(200, 80, 80);
+        rect(c * TS, r * TS, TS, TS);
+        // optional style:
+        // rect(c * TS + 8, r * TS + 8, TS - 16, TS - 16, 6);
+      } else {
+        // floor
+        fill(230);
+        rect(c * TS, r * TS, TS, TS);
+      }
     }
   }
 
@@ -89,7 +105,7 @@ function draw() {
   }
 }
 
-// move on key press (simple collision vs walls)
+// move on key press (simple collision vs walls/obstacles)
 function keyPressed() {
   if (won) return;
 
@@ -98,7 +114,6 @@ function keyPressed() {
   if (keyCode === DOWN_ARROW) dr = 1;
   if (keyCode === LEFT_ARROW) dc = -1;
   if (keyCode === RIGHT_ARROW) dc = 1;
-
   if (dr === 0 && dc === 0) return;
 
   const nr = player.r + dr;
@@ -107,8 +122,8 @@ function keyPressed() {
   // bounds check
   if (nr < 0 || nr >= grid.length || nc < 0 || nc >= grid[0].length) return;
 
-  // wall collision
-  if (grid[nr][nc] === 1) return;
+  // collision: wall OR obstacle blocks movement
+  if (grid[nr][nc] === 1 || grid[nr][nc] === 3) return;
 
   // move
   player.r = nr;
@@ -122,10 +137,7 @@ function keyPressed() {
     setTimeout(() => {
       const next = levelIndex + 1;
       if (next < LEVELS.length) loadLevel(next);
-      else {
-        // no more levels: reset or show end state
-        loadLevel(0);
-      }
+      else loadLevel(0);
     }, 800);
   }
 }
@@ -140,4 +152,3 @@ function loadLevel(i) {
 
   won = false;
 }
-
