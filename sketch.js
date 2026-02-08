@@ -53,6 +53,14 @@ let levelIndex = 0;
 let grid = null;
 let player = { r: 1, c: 1 };
 let won = false;
+let gameOver = false;
+
+function resetLevelToStart() {
+  player.r = LEVELS[levelIndex].playerStart.r;
+  player.c = LEVELS[levelIndex].playerStart.c;
+  won = false;
+  gameOver = false;
+}
 
 function setup() {
   loadLevel(0);
@@ -71,24 +79,16 @@ function draw() {
       const t = grid[r][c];
 
       if (t === 1) {
-        // wall
-        fill(30, 50, 60);
-        rect(c * TS, r * TS, TS, TS);
+        fill(30, 50, 60); // wall
       } else if (t === 2) {
-        // goal
-        fill(80, 180, 120);
-        rect(c * TS, r * TS, TS, TS);
+        fill(80, 180, 120); // goal
       } else if (t === 3) {
-        // obstacle (draw smaller so it looks like an object)
-        fill(200, 80, 80);
-        rect(c * TS, r * TS, TS, TS);
-        // optional style:
-        // rect(c * TS + 8, r * TS + 8, TS - 16, TS - 16, 6);
+        fill(200, 80, 80); // obstacle
       } else {
-        // floor
-        fill(230);
-        rect(c * TS, r * TS, TS, TS);
+        fill(230); // floor
       }
+
+      rect(c * TS, r * TS, TS, TS);
     }
   }
 
@@ -98,15 +98,45 @@ function draw() {
 
   // HUD text
   fill(0);
+  textSize(14);
+  textAlign(LEFT, BASELINE);
   text(`${LEVELS[levelIndex].name}  (use arrow keys)`, 10, 16);
 
   if (won) {
     text("✅ Level complete! Loading next...", 10, 36);
   }
+
+  // GAME OVER overlay (draws ON TOP — not blank)
+  if (gameOver) {
+    fill(0, 180);
+    rect(0, 0, width, height);
+
+    fill(255);
+    textAlign(CENTER, CENTER);
+
+    textSize(32);
+    text("GAME OVER", width / 2, height / 2 - 20);
+
+    textSize(16);
+    text("Press R to return to start", width / 2, height / 2 + 20);
+
+    // restore HUD defaults
+    textAlign(LEFT, BASELINE);
+    textSize(14);
+  }
 }
 
-// move on key press (simple collision vs walls/obstacles)
+
 function keyPressed() {
+  // If game over, only allow restart
+  if (gameOver) {
+    if (key === "r" || key === "R") {
+      resetLevelToStart();
+    }
+    return;
+  }
+
+  // If level is in "won" state, ignore movement
   if (won) return;
 
   let dr = 0, dc = 0;
@@ -122,8 +152,32 @@ function keyPressed() {
   // bounds check
   if (nr < 0 || nr >= grid.length || nc < 0 || nc >= grid[0].length) return;
 
-  // collision: wall OR obstacle blocks movement
-  if (grid[nr][nc] === 1 || grid[nr][nc] === 3) return;
+  // wall blocks movement
+  if (grid[nr][nc] === 1) return;
+
+  // obstacle triggers GAME OVER
+  if (grid[nr][nc] === 3) {
+    gameOver = true;
+    return;
+  }
+
+  // move
+  player.r = nr;
+  player.c = nc;
+
+  // win condition
+  if (grid[nr][nc] === 2) {
+    won = true;
+
+    setTimeout(() => {
+      const next = levelIndex + 1;
+      if (next < LEVELS.length) loadLevel(next);
+      else loadLevel(0);
+    }, 800);
+  }
+}
+
+
 
   // move
   player.r = nr;
@@ -140,15 +194,23 @@ function keyPressed() {
       else loadLevel(0);
     }, 800);
   }
-}
 
 function loadLevel(i) {
   levelIndex = i;
   grid = LEVELS[levelIndex].grid;
 
-  // reset player
   player.r = LEVELS[levelIndex].playerStart.r;
   player.c = LEVELS[levelIndex].playerStart.c;
 
   won = false;
+  gameOver = false;
+}
+
+
+
+function resetLevel() {
+  player.r = LEVELS[levelIndex].playerStart.r;
+  player.c = LEVELS[levelIndex].playerStart.c;
+  won = false;
+  gameOver = false;
 }
