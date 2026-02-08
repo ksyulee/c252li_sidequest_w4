@@ -54,11 +54,18 @@ let grid = null;
 let player = { r: 1, c: 1 };
 let won = false;
 let gameOver = false;
+let gameWin = false;
 
 function resetLevelToStart() {
   player.r = LEVELS[levelIndex].playerStart.r;
   player.c = LEVELS[levelIndex].playerStart.c;
   won = false;
+  gameOver = false;
+}
+
+function resetRunToLevel1() {
+  loadLevel(0);       // sends you back to Level 1 start
+  gameWin = false;
   gameOver = false;
 }
 
@@ -106,6 +113,26 @@ function draw() {
     text("✅ Level complete! Loading next...", 10, 36);
   }
 
+  // FINAL WIN overlay
+if (gameWin) {
+  fill(0, 180);
+  rect(0, 0, width, height);
+
+  fill(255);
+  textAlign(CENTER, CENTER);
+
+  textSize(32);
+  text("🎉 YOU WON!", width / 2, height / 2 - 20);
+
+  textSize(16);
+  text("Press R to play again", width / 2, height / 2 + 20);
+
+  // restore HUD defaults
+  textAlign(LEFT, BASELINE);
+  textSize(14);
+}
+
+
   // GAME OVER overlay (draws ON TOP — not blank)
   if (gameOver) {
     fill(0, 180);
@@ -126,25 +153,28 @@ function draw() {
   }
 }
 
-
 function keyPressed() {
-  // If game over, only allow restart
-  if (gameOver) {
-    if (key === "r" || key === "R") {
-      resetLevelToStart();
-    }
+  // FINAL WIN screen: press R to restart run
+  if (gameWin) {
+    if (key === "r" || key === "R") resetRunToLevel1();
     return;
   }
 
-  // If level is in "won" state, ignore movement
+  // GAME OVER screen: press R to restart current level
+  if (gameOver) {
+    if (key === "r" || key === "R") resetLevelToStart();
+    return;
+  }
+
+  // Ignore movement while auto-loading next level
   if (won) return;
 
   let dr = 0, dc = 0;
   if (keyCode === UP_ARROW) dr = -1;
-  if (keyCode === DOWN_ARROW) dr = 1;
-  if (keyCode === LEFT_ARROW) dc = -1;
-  if (keyCode === RIGHT_ARROW) dc = 1;
-  if (dr === 0 && dc === 0) return;
+  else if (keyCode === DOWN_ARROW) dr = 1;
+  else if (keyCode === LEFT_ARROW) dc = -1;
+  else if (keyCode === RIGHT_ARROW) dc = 1;
+  else return;
 
   const nr = player.r + dr;
   const nc = player.c + dc;
@@ -155,7 +185,7 @@ function keyPressed() {
   // wall blocks movement
   if (grid[nr][nc] === 1) return;
 
-  // obstacle triggers GAME OVER
+  // obstacle triggers GAME OVER (do NOT move onto it)
   if (grid[nr][nc] === 3) {
     gameOver = true;
     return;
@@ -165,35 +195,23 @@ function keyPressed() {
   player.r = nr;
   player.c = nc;
 
-  // win condition
+  // goal tile: either go to next level or show final win
   if (grid[nr][nc] === 2) {
     won = true;
 
     setTimeout(() => {
       const next = levelIndex + 1;
-      if (next < LEVELS.length) loadLevel(next);
-      else loadLevel(0);
+
+      if (next < LEVELS.length) {
+        loadLevel(next);      // Level 1 -> Level 2
+      } else {
+        gameWin = true;       // finished last level
+      }
+
+      won = false;            // clear loading state (either way)
     }, 800);
   }
 }
-
-
-
-  // move
-  player.r = nr;
-  player.c = nc;
-
-  // win condition: step on goal tile (2)
-  if (grid[nr][nc] === 2) {
-    won = true;
-
-    // BONUS: auto-load next level after a short delay
-    setTimeout(() => {
-      const next = levelIndex + 1;
-      if (next < LEVELS.length) loadLevel(next);
-      else loadLevel(0);
-    }, 800);
-  }
 
 function loadLevel(i) {
   levelIndex = i;
@@ -204,13 +222,5 @@ function loadLevel(i) {
 
   won = false;
   gameOver = false;
-}
-
-
-
-function resetLevel() {
-  player.r = LEVELS[levelIndex].playerStart.r;
-  player.c = LEVELS[levelIndex].playerStart.c;
-  won = false;
-  gameOver = false;
+  gameWin = false;
 }
